@@ -1,0 +1,364 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1000px;
+                 height: 700px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"betweenness_centrality": 0.005805086437497504, "closeness_centrality": 0.696969696969697, "color": "#198754", "degree_centrality": 0.5652173913043478, "font": {"color": "white"}, "group": 2, "id": "Bilbo", "label": "Bilbo", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.09661721677531955, "closeness_centrality": 0.9583333333333334, "color": "#dc3545", "degree_centrality": 0.9565217391304348, "font": {"color": "white"}, "group": 0, "id": "Frodo", "label": "Frodo", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.010690901105920868, "closeness_centrality": 0.71875, "color": "#198754", "degree_centrality": 0.6086956521739131, "font": {"color": "white"}, "group": 2, "id": "Gollum", "label": "Gollum", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.04035898225621547, "closeness_centrality": 0.8846153846153846, "color": "#ffc107", "degree_centrality": 0.8695652173913043, "font": {"color": "white"}, "group": 1, "id": "Gandalf", "label": "Gandalf", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0034495149119655043, "closeness_centrality": 0.6388888888888888, "color": "#ffc107", "degree_centrality": 0.43478260869565216, "font": {"color": "white"}, "group": 1, "id": "Peregrin", "label": "Peregrin", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.014842667214208714, "closeness_centrality": 0.7419354838709677, "color": "#dc3545", "degree_centrality": 0.6521739130434783, "font": {"color": "white"}, "group": 0, "id": "Galadriel", "label": "Galadriel", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.08559222946574727, "closeness_centrality": 0.92, "color": "#dc3545", "degree_centrality": 1.0, "font": {"color": "white"}, "group": 0, "id": "Sam", "label": "Sam", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0077658288132596434, "closeness_centrality": 0.6571428571428571, "color": "#ffc107", "degree_centrality": 0.4782608695652174, "font": {"color": "white"}, "group": 1, "id": "Meriadoc", "label": "Meriadoc", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.02938104934152365, "closeness_centrality": 0.8214285714285714, "color": "#198754", "degree_centrality": 0.7826086956521738, "font": {"color": "white"}, "group": 2, "id": "Saruman", "label": "Saruman", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.022056105949386583, "closeness_centrality": 0.7931034482758621, "color": "#198754", "degree_centrality": 0.7391304347826086, "font": {"color": "white"}, "group": 2, "id": "Elrond", "label": "Elrond", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.048158889858494605, "closeness_centrality": 0.8846153846153846, "color": "#198754", "degree_centrality": 0.8695652173913043, "font": {"color": "white"}, "group": 2, "id": "Aragorn", "label": "Aragorn", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.015350997267993313, "closeness_centrality": 0.7931034482758621, "color": "#198754", "degree_centrality": 0.7391304347826086, "font": {"color": "white"}, "group": 2, "id": "Boromir", "label": "Boromir", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.01608960867854148, "closeness_centrality": 0.7666666666666667, "color": "#198754", "degree_centrality": 0.6956521739130435, "font": {"color": "white"}, "group": 2, "id": "Legolas", "label": "Legolas", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.012993429495405778, "closeness_centrality": 0.7419354838709677, "color": "#198754", "degree_centrality": 0.6521739130434783, "font": {"color": "white"}, "group": 2, "id": "Gimli", "label": "Gimli", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.031705536448619454, "closeness_centrality": 0.7931034482758621, "color": "#198754", "degree_centrality": 0.7391304347826086, "font": {"color": "white"}, "group": 2, "id": "Sauron", "label": "Sauron", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.003952569169960473, "closeness_centrality": 0.5609756097560976, "color": "#dc3545", "degree_centrality": 0.2608695652173913, "font": {"color": "white"}, "group": 0, "id": "Tom", "label": "Tom", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0, "closeness_centrality": 0.5227272727272727, "color": "#dc3545", "degree_centrality": 0.13043478260869565, "font": {"color": "white"}, "group": 0, "id": "Goldberry", "label": "Goldberry", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0, "closeness_centrality": 0.6052631578947368, "color": "#198754", "degree_centrality": 0.34782608695652173, "font": {"color": "white"}, "group": 2, "id": "Glorfindel", "label": "Glorfindel", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0046130417671919645, "closeness_centrality": 0.6571428571428571, "color": "#dc3545", "degree_centrality": 0.4782608695652174, "font": {"color": "white"}, "group": 0, "id": "Celeborn", "label": "Celeborn", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.004188126322513673, "closeness_centrality": 0.6764705882352942, "color": "#ffc107", "degree_centrality": 0.5217391304347826, "font": {"color": "white"}, "group": 1, "id": "Faramir", "label": "Faramir", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0, "closeness_centrality": 0.5609756097560976, "color": "#dc3545", "degree_centrality": 0.21739130434782608, "font": {"color": "white"}, "group": 0, "id": "Shelob", "label": "Shelob", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0040091770328924475, "closeness_centrality": 0.6571428571428571, "color": "#ffc107", "degree_centrality": 0.4782608695652174, "font": {"color": "white"}, "group": 1, "id": "Denethor", "label": "Denethor", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.008782203742678052, "closeness_centrality": 0.6764705882352942, "color": "#dc3545", "degree_centrality": 0.5217391304347826, "font": {"color": "white"}, "group": 0, "id": "Treebeard", "label": "Treebeard", "shape": "dot", "size": 10}, {"betweenness_centrality": 0.0, "closeness_centrality": 0.5476190476190477, "color": "#198754", "degree_centrality": 0.2608695652173913, "font": {"color": "white"}, "group": 2, "id": "Halbarad", "label": "Halbarad", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"from": "Bilbo", "to": "Frodo", "value": 715, "width": 1}, {"from": "Bilbo", "to": "Gollum", "value": 169, "width": 1}, {"from": "Bilbo", "to": "Gandalf", "value": 287, "width": 1}, {"from": "Bilbo", "to": "Peregrin", "value": 7, "width": 1}, {"from": "Bilbo", "to": "Galadriel", "value": 13, "width": 1}, {"from": "Bilbo", "to": "Sam", "value": 158, "width": 1}, {"from": "Bilbo", "to": "Meriadoc", "value": 4, "width": 1}, {"from": "Bilbo", "to": "Saruman", "value": 9, "width": 1}, {"from": "Bilbo", "to": "Elrond", "value": 39, "width": 1}, {"from": "Bilbo", "to": "Aragorn", "value": 13, "width": 1}, {"from": "Bilbo", "to": "Boromir", "value": 16, "width": 1}, {"from": "Bilbo", "to": "Legolas", "value": 3, "width": 1}, {"from": "Bilbo", "to": "Gimli", "value": 6, "width": 1}, {"from": "Frodo", "to": "Gandalf", "value": 621, "width": 1}, {"from": "Frodo", "to": "Meriadoc", "value": 5, "width": 1}, {"from": "Frodo", "to": "Sam", "value": 2856, "width": 1}, {"from": "Frodo", "to": "Saruman", "value": 76, "width": 1}, {"from": "Frodo", "to": "Gollum", "value": 400, "width": 1}, {"from": "Frodo", "to": "Sauron", "value": 35, "width": 1}, {"from": "Frodo", "to": "Peregrin", "value": 10, "width": 1}, {"from": "Frodo", "to": "Tom", "value": 116, "width": 1}, {"from": "Frodo", "to": "Goldberry", "value": 27, "width": 1}, {"from": "Frodo", "to": "Elrond", "value": 104, "width": 1}, {"from": "Frodo", "to": "Glorfindel", "value": 28, "width": 1}, {"from": "Frodo", "to": "Aragorn", "value": 111, "width": 1}, {"from": "Frodo", "to": "Gimli", "value": 103, "width": 1}, {"from": "Frodo", "to": "Legolas", "value": 69, "width": 1}, {"from": "Frodo", "to": "Boromir", "value": 311, "width": 1}, {"from": "Frodo", "to": "Celeborn", "value": 16, "width": 1}, {"from": "Frodo", "to": "Galadriel", "value": 50, "width": 1}, {"from": "Frodo", "to": "Faramir", "value": 272, "width": 1}, {"from": "Frodo", "to": "Shelob", "value": 22, "width": 1}, {"from": "Frodo", "to": "Denethor", "value": 14, "width": 1}, {"from": "Frodo", "to": "Treebeard", "value": 4, "width": 1}, {"from": "Gollum", "to": "Gandalf", "value": 46, "width": 1}, {"from": "Gollum", "to": "Elrond", "value": 7, "width": 1}, {"from": "Gollum", "to": "Aragorn", "value": 37, "width": 1}, {"from": "Gollum", "to": "Saruman", "value": 11, "width": 1}, {"from": "Gollum", "to": "Denethor", "value": 6, "width": 1}, {"from": "Gollum", "to": "Boromir", "value": 8, "width": 1}, {"from": "Gollum", "to": "Legolas", "value": 18, "width": 1}, {"from": "Gollum", "to": "Gimli", "value": 5, "width": 1}, {"from": "Gollum", "to": "Sam", "value": 673, "width": 1}, {"from": "Gollum", "to": "Faramir", "value": 85, "width": 1}, {"from": "Gollum", "to": "Shelob", "value": 8, "width": 1}, {"from": "Gollum", "to": "Sauron", "value": 8, "width": 1}, {"from": "Gandalf", "to": "Sam", "value": 258, "width": 1}, {"from": "Gandalf", "to": "Tom", "value": 5, "width": 1}, {"from": "Gandalf", "to": "Glorfindel", "value": 30, "width": 1}, {"from": "Gandalf", "to": "Elrond", "value": 80, "width": 1}, {"from": "Gandalf", "to": "Aragorn", "value": 132, "width": 1}, {"from": "Gandalf", "to": "Boromir", "value": 170, "width": 1}, {"from": "Gandalf", "to": "Legolas", "value": 189, "width": 1}, {"from": "Gandalf", "to": "Sauron", "value": 91, "width": 1}, {"from": "Gandalf", "to": "Saruman", "value": 361, "width": 1}, {"from": "Gandalf", "to": "Peregrin", "value": 26, "width": 1}, {"from": "Gandalf", "to": "Gimli", "value": 248, "width": 1}, {"from": "Gandalf", "to": "Celeborn", "value": 11, "width": 1}, {"from": "Gandalf", "to": "Galadriel", "value": 41, "width": 1}, {"from": "Gandalf", "to": "Denethor", "value": 198, "width": 1}, {"from": "Gandalf", "to": "Faramir", "value": 168, "width": 1}, {"from": "Gandalf", "to": "Treebeard", "value": 108, "width": 1}, {"from": "Gandalf", "to": "Meriadoc", "value": 11, "width": 1}, {"from": "Peregrin", "to": "Meriadoc", "value": 12, "width": 1}, {"from": "Peregrin", "to": "Sam", "value": 9, "width": 1}, {"from": "Peregrin", "to": "Elrond", "value": 5, "width": 1}, {"from": "Peregrin", "to": "Denethor", "value": 5, "width": 1}, {"from": "Peregrin", "to": "Aragorn", "value": 7, "width": 1}, {"from": "Peregrin", "to": "Celeborn", "value": 3, "width": 1}, {"from": "Peregrin", "to": "Saruman", "value": 1, "width": 1}, {"from": "Meriadoc", "to": "Sauron", "value": 5, "width": 1}, {"from": "Meriadoc", "to": "Celeborn", "value": 4, "width": 1}, {"from": "Meriadoc", "to": "Faramir", "value": 9, "width": 1}, {"from": "Meriadoc", "to": "Denethor", "value": 4, "width": 1}, {"from": "Meriadoc", "to": "Sam", "value": 5, "width": 1}, {"from": "Meriadoc", "to": "Treebeard", "value": 4, "width": 1}, {"from": "Meriadoc", "to": "Saruman", "value": 5, "width": 1}, {"from": "Sauron", "to": "Elrond", "value": 19, "width": 1}, {"from": "Sauron", "to": "Boromir", "value": 29, "width": 1}, {"from": "Sauron", "to": "Saruman", "value": 64, "width": 1}, {"from": "Sauron", "to": "Denethor", "value": 25, "width": 1}, {"from": "Sauron", "to": "Legolas", "value": 13, "width": 1}, {"from": "Sauron", "to": "Glorfindel", "value": 4, "width": 1}, {"from": "Sauron", "to": "Gimli", "value": 42, "width": 1}, {"from": "Sauron", "to": "Sam", "value": 52, "width": 1}, {"from": "Sauron", "to": "Halbarad", "value": 7, "width": 1}, {"from": "Sauron", "to": "Faramir", "value": 5, "width": 1}, {"from": "Sauron", "to": "Aragorn", "value": 16, "width": 1}, {"from": "Sauron", "to": "Shelob", "value": 11, "width": 1}, {"from": "Sauron", "to": "Galadriel", "value": 5, "width": 1}, {"from": "Celeborn", "to": "Galadriel", "value": 67, "width": 1}, {"from": "Celeborn", "to": "Legolas", "value": 15, "width": 1}, {"from": "Celeborn", "to": "Gimli", "value": 20, "width": 1}, {"from": "Celeborn", "to": "Boromir", "value": 7, "width": 1}, {"from": "Celeborn", "to": "Aragorn", "value": 20, "width": 1}, {"from": "Celeborn", "to": "Sam", "value": 5, "width": 1}, {"from": "Celeborn", "to": "Treebeard", "value": 16, "width": 1}, {"from": "Galadriel", "to": "Legolas", "value": 30, "width": 1}, {"from": "Galadriel", "to": "Gimli", "value": 11, "width": 1}, {"from": "Galadriel", "to": "Sam", "value": 76, "width": 1}, {"from": "Galadriel", "to": "Elrond", "value": 21, "width": 1}, {"from": "Galadriel", "to": "Boromir", "value": 11, "width": 1}, {"from": "Galadriel", "to": "Aragorn", "value": 1, "width": 1}, {"from": "Galadriel", "to": "Treebeard", "value": 4, "width": 1}, {"from": "Galadriel", "to": "Saruman", "value": 10, "width": 1}, {"from": "Galadriel", "to": "Tom", "value": 6, "width": 1}, {"from": "Galadriel", "to": "Faramir", "value": 6, "width": 1}, {"from": "Sam", "to": "Tom", "value": 29, "width": 1}, {"from": "Sam", "to": "Goldberry", "value": 3, "width": 1}, {"from": "Sam", "to": "Elrond", "value": 67, "width": 1}, {"from": "Sam", "to": "Glorfindel", "value": 14, "width": 1}, {"from": "Sam", "to": "Aragorn", "value": 77, "width": 1}, {"from": "Sam", "to": "Gimli", "value": 57, "width": 1}, {"from": "Sam", "to": "Boromir", "value": 72, "width": 1}, {"from": "Sam", "to": "Legolas", "value": 74, "width": 1}, {"from": "Sam", "to": "Saruman", "value": 11, "width": 1}, {"from": "Sam", "to": "Shelob", "value": 85, "width": 1}, {"from": "Sam", "to": "Faramir", "value": 143, "width": 1}, {"from": "Sam", "to": "Treebeard", "value": 5, "width": 1}, {"from": "Sam", "to": "Sam", "value": 6, "width": 1}, {"from": "Saruman", "to": "Elrond", "value": 8, "width": 1}, {"from": "Saruman", "to": "Denethor", "value": 5, "width": 1}, {"from": "Saruman", "to": "Boromir", "value": 33, "width": 1}, {"from": "Saruman", "to": "Glorfindel", "value": 6, "width": 1}, {"from": "Saruman", "to": "Halbarad", "value": 2, "width": 1}, {"from": "Saruman", "to": "Aragorn", "value": 33, "width": 1}, {"from": "Saruman", "to": "Treebeard", "value": 62, "width": 1}, {"from": "Saruman", "to": "Gimli", "value": 81, "width": 1}, {"from": "Saruman", "to": "Legolas", "value": 35, "width": 1}, {"from": "Tom", "to": "Goldberry", "value": 123, "width": 1}, {"from": "Tom", "to": "Treebeard", "value": 4, "width": 1}, {"from": "Elrond", "to": "Glorfindel", "value": 32, "width": 1}, {"from": "Elrond", "to": "Aragorn", "value": 33, "width": 1}, {"from": "Elrond", "to": "Gimli", "value": 23, "width": 1}, {"from": "Elrond", "to": "Legolas", "value": 14, "width": 1}, {"from": "Elrond", "to": "Denethor", "value": 3, "width": 1}, {"from": "Elrond", "to": "Boromir", "value": 34, "width": 1}, {"from": "Elrond", "to": "Halbarad", "value": 4, "width": 1}, {"from": "Elrond", "to": "Faramir", "value": 6, "width": 1}, {"from": "Glorfindel", "to": "Aragorn", "value": 5, "width": 1}, {"from": "Glorfindel", "to": "Boromir", "value": 1, "width": 1}, {"from": "Aragorn", "to": "Boromir", "value": 152, "width": 1}, {"from": "Aragorn", "to": "Legolas", "value": 223, "width": 1}, {"from": "Aragorn", "to": "Gimli", "value": 129, "width": 1}, {"from": "Aragorn", "to": "Halbarad", "value": 13, "width": 1}, {"from": "Aragorn", "to": "Faramir", "value": 66, "width": 1}, {"from": "Aragorn", "to": "Shelob", "value": 4, "width": 1}, {"from": "Aragorn", "to": "Denethor", "value": 14, "width": 1}, {"from": "Aragorn", "to": "Treebeard", "value": 13, "width": 1}, {"from": "Gimli", "to": "Legolas", "value": 804, "width": 1}, {"from": "Gimli", "to": "Boromir", "value": 88, "width": 1}, {"from": "Gimli", "to": "Halbarad", "value": 15, "width": 1}, {"from": "Gimli", "to": "Treebeard", "value": 17, "width": 1}, {"from": "Legolas", "to": "Boromir", "value": 103, "width": 1}, {"from": "Legolas", "to": "Halbarad", "value": 15, "width": 1}, {"from": "Legolas", "to": "Faramir", "value": 2, "width": 1}, {"from": "Legolas", "to": "Treebeard", "value": 37, "width": 1}, {"from": "Boromir", "to": "Denethor", "value": 113, "width": 1}, {"from": "Boromir", "to": "Faramir", "value": 164, "width": 1}, {"from": "Boromir", "to": "Treebeard", "value": 4, "width": 1}, {"from": "Denethor", "to": "Faramir", "value": 187, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
